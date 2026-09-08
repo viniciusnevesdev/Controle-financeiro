@@ -4,7 +4,10 @@ Web app de controle financeiro pessoal, pensado primeiro para iPhone.
 
 ## Abrir o aplicativo
 
-https://8w2jh948cw-sudo.github.io/Controle-financeiro/
+- Aplicativo Oficial: https://viniciusnevesdev.github.io/Controle-financeiro/
+- Menu geral: https://viniciusnevesdev.github.io/Controle-financeiro/menu.html
+- Versão Beta: https://viniciusnevesdev.github.io/Controle-financeiro/beta/
+- Diagnóstico e recuperação: https://viniciusnevesdev.github.io/Controle-financeiro/diagnostico/
 
 ## Recursos
 

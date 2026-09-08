@@ -1,14 +1,20 @@
-name: Publicar Meu Dinheiro
+name: Atualizar Meu Dinheiro no GitHub Pages
 
 on:
   push:
     branches: ["main"]
+    paths:
+      - "source/**"
+      - "beta-tools.js"
+      - "prepare_environments.py"
+      - "manual_pwa_hardening.py"
+      - "generate_valid_pwa_icons.py"
+      - "verify_site.py"
+      - ".github/workflows/deploy.yml"
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
   group: "pages-meu-dinheiro"
@@ -17,19 +23,18 @@ concurrency:
 env:
   STABLE_RELEASE: "1.0.0"
   BETA_LABEL: "1.1.0-beta.${{ github.run_number }}"
-  PUBLIC_BASE: "https://8w2jh948cw-sudo.github.io/Controle-financeiro"
+  PUBLIC_BASE: "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}"
 
 jobs:
-  build-and-deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  build-publish-verify:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout do desenvolvimento Beta
+      - name: Baixar o desenvolvimento atual
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Checkout da versão Oficial congelada
+      - name: Baixar a versão Oficial congelada
         uses: actions/checkout@v4
         with:
           ref: stable
@@ -43,13 +48,13 @@ jobs:
           cache: npm
           cache-dependency-path: source/package-lock.json
 
-      - name: Compilar e conferir o código da Beta
+      - name: Compilar a versão Beta
         working-directory: source
         run: |
           npm ci
           npm run build
 
-      - name: Atualizar arquivos compilados usados pela Beta
+      - name: Atualizar os arquivos compilados da Beta
         run: |
           find assets -type f -delete
           cp -R source/dist/assets/. assets/
@@ -59,217 +64,64 @@ jobs:
           cp source/dist/icon.svg icon.svg
           cp source/dist/sw.js sw.js
 
-      - name: Montar ambientes isolados
+      - name: Montar Oficial, Beta, menu e ferramentas
         run: python3 prepare_environments.py
 
-      - name: Preparar ferramentas de ícones
-        run: python3 -m pip install --quiet pillow
-
-      - name: Gerar PNGs válidos para iPhone e PWA
+      - name: Preparar e preservar os ícones PWA
         run: |
-          python3 -m py_compile generate_valid_pwa_icons.py
+          python3 -m pip install --quiet pillow
+          python3 -m py_compile generate_valid_pwa_icons.py manual_pwa_hardening.py verify_site.py
           python3 generate_valid_pwa_icons.py
-
-      - name: Aplicar manual de estabilidade PWA
-        run: |
-          python3 -m py_compile manual_pwa_hardening.py
           python3 manual_pwa_hardening.py
 
-      - name: Conferir arquitetura, dados, menu e ícones
+      - name: Testar arquivos, links, dados separados e ícones
+        run: python3 verify_site.py _site
+
+      - name: Sincronizar o site com a raiz publicada
         run: |
-          set -e
-          for file in \
-            _site/index.html \
-            _site/central.html \
-            _site/menu.html \
-            _site/menu/index.html \
-            _site/diagnostico/index.html \
-            _site/launch.html \
-            _site/recover.html \
-            _site/safe.html \
-            _site/environment.json \
-            _site/ambientes.json \
-            _site/apple-touch-icon.png \
-            _site/icons/apple-touch-icon.png \
-            _site/icons/icon-192.png \
-            _site/icons/icon-512.png \
-            _site/icons/menu.svg \
-            _site/icons/diagnostic.svg \
-            _site/icons/launch.svg \
-            _site/icons/recover.svg \
-            _site/icons/safe.svg \
-            _site/beta/index.html \
-            _site/beta/launch.html \
-            _site/beta/recover.html \
-            _site/beta/safe.html \
-            _site/beta/beta-tools.js \
-            _site/beta/environment.json \
-            _site/beta/apple-touch-icon.png \
-            _site/beta/icons/apple-touch-icon.png \
-            _site/beta/icons/icon-192.png \
-            _site/beta/icons/icon-512.png \
-            _site/beta/icons/launch.svg \
-            _site/beta/icons/recover.svg \
-            _site/beta/icons/safe.svg
-          do
-            test -s "$file"
-          done
+          rm -rf beta diagnostico menu icons
+          cp -a _site/. ./
+          rm -rf _site _stable
 
-          grep -q 'app-environment.*official' _site/index.html
-          grep -q 'app-environment.*beta' _site/beta/index.html
-          grep -q 'meu-dinheiro-inteligente-beta' _site/beta/assets/*.js
-          ! grep -q '"meu-dinheiro-inteligente-state"' _site/beta/assets/*.js
-          ! cmp -s _site/apple-touch-icon.png _site/beta/apple-touch-icon.png
+          git add -A -- \
+            .nojekyll 404.html index.html manifest.webmanifest sw.js \
+            icon.svg apple-touch-icon.png assets beta diagnostico menu icons \
+            central.html menu.html launch.html recover.html safe.html \
+            environment.json ambientes.json
 
-          grep -R -q 'serviceWorker.register' _site/assets
-          grep -R -q 'serviceWorker.register' _site/beta/assets
-          grep -q 'addEventListener("fetch"' _site/sw.js
-          grep -q 'addEventListener("fetch"' _site/beta/sw.js
-          grep -Eq '\./assets/.+\.css' _site/sw.js
-          grep -Eq '\./assets/.+\.js' _site/sw.js
-          grep -Eq '\./assets/.+\.css' _site/beta/sw.js
-          grep -Eq '\./assets/.+\.js' _site/beta/sw.js
+          if git diff --cached --quiet; then
+            echo "O site publicado já está atualizado."
+            exit 0
+          fi
 
-          # Regras críticas do manual atualizado para o Menu.
-          grep -q 'finance-tools-page.*menu' _site/menu.html
-          grep -q 'Central de Diagnóstico' _site/menu.html
-          grep -q 'repeat(2,minmax(0,1fr))' _site/menu.html
-          ! grep -q '<script' _site/menu.html
-          ! grep -q 'assets/' _site/menu.html
-          ! grep -q 'app-shell' _site/menu.html
-          ! grep -q 'id="root"' _site/menu.html
-          ! grep -q 'http-equiv="refresh"' _site/menu.html
-          ! grep -q "location.replace('./menu.html')" _site/menu.html
-          ! grep -q 'location.href' _site/menu.html
-          ! grep -q 'window.location' _site/menu.html
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Atualizar site publicado"
+          git push
 
-          grep -q 'mdBootFallback' _site/index.html
-          grep -q 'mdBootFallback' _site/beta/index.html
-          grep -q 'Ambiente web' _site/index.html
-          grep -q 'Interface funcional' _site/index.html
-          grep -q 'Registros reais de SW' _site/diagnostico/index.html
-          grep -q 'Caches reais' _site/diagnostico/index.html
-          grep -q 'href="../menu.html">Menu principal' _site/beta/index.html
-
-          grep -q 'Seus dados foram preservados' _site/recover.html
-          grep -q 'NÃO toca no app Oficial\|Não toca no Oficial\|NÃO TOCA NO OFICIAL' _site/beta/recover.html _site/diagnostico/index.html
-          ! grep -R -q 'localStorage.clear' _site/recover.html _site/beta/recover.html
-          ! grep -R -q 'indexedDB.deleteDatabase' _site/recover.html _site/beta/recover.html
-
-          python3 - <<'PY'
-          from pathlib import Path
-          import json
-          from PIL import Image
-
-          root = Path('_site')
-          for base in (root, root/'beta'):
-              manifest = json.loads((base/'manifest.webmanifest').read_text(encoding='utf-8'))
-              assert manifest['start_url'] == './'
-              assert manifest['scope'] == './'
-              sizes = {icon['sizes'] for icon in manifest['icons']}
-              assert {'192x192', '512x512'} <= sizes
-              assert Image.open(base/'apple-touch-icon.png').size == (512, 512)
-              assert Image.open(base/'icons/apple-touch-icon.png').size == (180, 180)
-              assert Image.open(base/'icons/icon-192.png').size == (192, 192)
-              assert Image.open(base/'icons/icon-512.png').size == (512, 512)
-          print('Manifestos e dimensões de ícones validados.')
-          PY
-
-          python3 - <<'PY'
-          from pathlib import Path
-          from html.parser import HTMLParser
-          from urllib.parse import urlsplit
-
-          root = Path('_site')
-          pages = [root/'menu.html', root/'menu/index.html', root/'diagnostico/index.html']
-
-          class Links(HTMLParser):
-              def __init__(self):
-                  super().__init__(); self.links=[]
-              def handle_starttag(self, tag, attrs):
-                  if tag == 'a':
-                      href = dict(attrs).get('href')
-                      if href: self.links.append(href)
-
-          for page in pages:
-              p = Links(); p.feed(page.read_text(encoding='utf-8'))
-              for href in p.links:
-                  if href.startswith(('http:', 'https:', 'mailto:', '#')): continue
-                  clean = urlsplit(href).path
-                  target = (page.parent / clean).resolve()
-                  if clean.endswith('/'):
-                      target = target / 'index.html'
-                  if target.is_dir():
-                      target = target / 'index.html'
-                  if not target.exists():
-                      raise SystemExit(f'Link quebrado em {page}: {href} -> {target}')
-          print('Todos os links internos do Menu e Diagnóstico foram validados.')
-          PY
-
-      - name: Habilitar e configurar Pages
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh api --method PUT "repos/${GITHUB_REPOSITORY}/pages" -f build_type=workflow
-
-      - name: Configurar GitHub Pages
-        uses: actions/configure-pages@v5
-        with:
-          enablement: true
-
-      - name: Enviar site completo
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: _site
-
-      - name: Publicar
-        id: deployment
-        uses: actions/deploy-pages@v4
-
-      - name: Validar URLs públicas reais
+      - name: Conferir os endereços públicos
         run: |
-          set -e
-          echo "Aguardando propagação do GitHub Pages..."
-          sleep 5
-
           fetch_public() {
             local url="$1"
-            local out="$2"
-            local ok=0
-            for attempt in 1 2 3 4 5 6 7 8 9 10 11 12; do
+            local expected="$2"
+            local out
+            out=$(mktemp)
+            for attempt in {1..30}; do
               code=$(curl -L -sS -o "$out" -w '%{http_code}' --connect-timeout 10 --max-time 20 "$url" || true)
-              echo "[$attempt] $url -> HTTP $code / $(wc -c < "$out" 2>/dev/null || echo 0) bytes"
-              if [ "$code" = "200" ] && [ -s "$out" ]; then ok=1; break; fi
+              if [ "$code" = "200" ] && grep -q "$expected" "$out"; then
+                echo "[OK] $url"
+                return 0
+              fi
+              echo "[$attempt/30] aguardando $url (HTTP $code)"
               sleep 5
             done
-            if [ "$ok" != "1" ]; then
-              echo "FALHA: URL pública não ficou disponível: $url"
-              sed -n '1,80p' "$out" 2>/dev/null || true
-              return 1
-            fi
+            echo "FALHA: $url não publicou o conteúdo esperado."
+            return 1
           }
 
-          fetch_public "$PUBLIC_BASE/menu.html" /tmp/public-menu.html
-          fetch_public "$PUBLIC_BASE/" /tmp/public-official.html
-          fetch_public "$PUBLIC_BASE/beta/" /tmp/public-beta.html
-          fetch_public "$PUBLIC_BASE/diagnostico/" /tmp/public-diag.html
-          fetch_public "$PUBLIC_BASE/safe.html" /tmp/public-safe.html
-          fetch_public "$PUBLIC_BASE/beta/safe.html" /tmp/public-beta-safe.html
-
-          echo "--- MENU PÚBLICO: primeiras linhas ---"
-          sed -n '1,40p' /tmp/public-menu.html
-
-          # O conteúdo público precisa ser o Menu real, e não o app ou um redirect.
-          grep -q 'finance-tools-page.*menu' /tmp/public-menu.html
-          grep -q 'Central de Diagnóstico' /tmp/public-menu.html
-          ! grep -q 'id="root"' /tmp/public-menu.html
-          ! grep -q 'app-shell' /tmp/public-menu.html
-          ! grep -q 'http-equiv="refresh"' /tmp/public-menu.html
-          ! grep -q "location.replace('./menu.html')" /tmp/public-menu.html
-
-          grep -q 'app-environment.*official' /tmp/public-official.html
-          grep -q 'app-environment.*beta' /tmp/public-beta.html
-          grep -q 'Diagnóstico' /tmp/public-diag.html
-          grep -q 'Modo seguro' /tmp/public-safe.html
-          grep -q 'Modo seguro' /tmp/public-beta-safe.html
-
-          echo "[OK] GitHub Pages está servindo o Menu real e todas as páginas críticas com HTTP 200."
+          fetch_public "$PUBLIC_BASE/" 'app-environment.*official'
+          fetch_public "$PUBLIC_BASE/menu.html" 'finance-tools-page.*menu'
+          fetch_public "$PUBLIC_BASE/beta/" 'app-environment.*beta'
+          fetch_public "$PUBLIC_BASE/diagnostico/" 'Diagnóstico'
+          fetch_public "$PUBLIC_BASE/safe.html" 'Modo seguro'
+          fetch_public "$PUBLIC_BASE/beta/safe.html" 'Modo seguro'
