@@ -2,21 +2,22 @@
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <meta name="app-environment" content="official" />
-    <meta name="app-release" content="1.0.0" />
+    <meta name="app-environment" content="beta" />
+    <meta name="app-release" content="1.1.0-beta.45" />
+    <meta name="robots" content="noindex,nofollow" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#f6f7f4" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <meta name="apple-mobile-web-app-title" content="Meu Dinheiro" />
+    <meta name="apple-mobile-web-app-title" content="Meu Dinheiro Beta" />
     <meta name="description" content="Controle financeiro local, inteligente e simples." />
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="icon" href="./apple-touch-icon.png" type="image/png" sizes="512x512" />
     <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
-    <title>Meu Dinheiro Inteligente</title>
-    <script type="module" crossorigin src="./assets/index--FVaWfUS.js"></script>
+    <title>Meu Dinheiro Beta</title>
+    <script type="module" crossorigin src="./assets/index-DqbmHWt-.js"></script>
     <link rel="stylesheet" crossorigin href="./assets/index-BVjSN_JA.css">
-      <script>window.APP_RELEASE='1.0.0';window.APP_ENVIRONMENT='official';</script>
+      <script>window.APP_RELEASE='1.1.0-beta.45';window.APP_ENVIRONMENT='beta';</script>
   
 <style data-md-resilient-boot>
 #mdBootFallback{position:fixed;inset:0;z-index:2147482000;display:grid;place-items:center;padding:calc(22px + env(safe-area-inset-top)) 18px calc(22px + env(safe-area-inset-bottom));background:#f6f7f4;color:#101412;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif}
@@ -28,10 +29,10 @@
 </style>
 </head>
   <body>
-<div id="mdBootFallback" style="--md-boot-accent:#168753">
+<div id="mdBootFallback" style="--md-boot-accent:#3478F6">
   <section id="mdBootCard" role="status" aria-live="polite">
-    <h1>Meu Dinheiro</h1>
-    <p id="mdBootRelease">OFICIAL · 1.0.0</p>
+    <h1>Meu Dinheiro Beta</h1>
+    <p id="mdBootRelease">BETA · 1.1.0-beta.45</p>
     <div id="mdBootSteps">
       <div class="mdBootStep ok" data-step="html"><span class="mdBootDot"></span><span>Tela inicial</span><b>OK</b></div>
       <div class="mdBootStep" data-step="runtime"><span class="mdBootDot"></span><span>Ambiente web</span><b>verificando</b></div>
@@ -43,15 +44,16 @@
     <p id="mdBootMessage">Abrindo a interface sem depender da limpeza de cache.</p>
     <div class="mdBootActions" id="mdBootActions">
       <a href="./safe.html">Modo seguro</a>
-      <a href="./menu.html">Menu principal</a>
+      <a href="../menu.html">Menu principal</a>
     </div>
   </section>
 </div>
     <div id="root"></div>
+      <script src="./beta-tools.js?v=1.1.0-beta.45" defer></script>
   <script data-md-resilient-boot-script>
 (() => {
-  const RELEASE = '1.0.0';
-  const CACHE_PREFIXES = ["meu-dinheiro-oficial-", "meu-dinheiro-inteligente-v"];
+  const RELEASE = '1.1.0-beta.45';
+  const CACHE_PREFIXES = ["meu-dinheiro-beta-"];
   const TIMEOUT = 1800;
   const boot = document.getElementById("mdBootFallback");
   const message = document.getElementById("mdBootMessage");

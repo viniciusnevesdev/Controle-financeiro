@@ -1,7 +1,7 @@
 {
-  "name": "Meu Dinheiro",
-  "short_name": "Meu Dinheiro",
-  "description": "Controle financeiro pessoal local, simples e seguro.",
+  "name": "Meu Dinheiro Beta",
+  "short_name": "Dinheiro Beta",
+  "description": "Ambiente Beta isolado do Meu Dinheiro.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

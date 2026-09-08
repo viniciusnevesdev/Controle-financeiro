@@ -1,0 +1,22 @@
+{
+  "official": {
+    "path": "./",
+    "release": "1.0.0",
+    "branch": "stable",
+    "database": "meu-dinheiro-inteligente"
+  },
+  "beta": {
+    "path": "./beta/",
+    "release": "1.1.0-beta.45",
+    "branch": "main",
+    "database": "meu-dinheiro-inteligente-beta"
+  },
+  "menu": {
+    "path": "./menu.html",
+    "alias": "./menu/"
+  },
+  "diagnostic": {
+    "path": "./diagnostico/"
+  },
+  "data_flow": "official-to-beta-only"
+}

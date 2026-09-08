@@ -1,0 +1,9 @@
+{
+  "environment": "production",
+  "release": "1.0.0",
+  "branch": "stable",
+  "database": "meu-dinheiro-inteligente",
+  "fallback": "meu-dinheiro-inteligente-state",
+  "writes_to_production": true,
+  "stable": true
+}

@@ -1,0 +1,10 @@
+{
+  "environment": "beta",
+  "release": "1.1.0-beta.45",
+  "branch": "main",
+  "database": "meu-dinheiro-inteligente-beta",
+  "fallback": "meu-dinheiro-inteligente-beta-state",
+  "writes_to_production": false,
+  "stable": false,
+  "copy_direction": "production-to-beta-only"
+}
