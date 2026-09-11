@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#0b0b0d" />
+  <title>Editor global de ícones · Meu Dinheiro</title>
+  <style>
+    :root{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",Inter,sans-serif;color:#f5f5f7;background:#050506;color-scheme:dark}
+    *{box-sizing:border-box}body{margin:0;background:#050506;color:#f5f5f7}.shell{max-width:980px;margin:0 auto;padding:calc(18px + env(safe-area-inset-top)) 16px calc(120px + env(safe-area-inset-bottom))}
+    header{display:grid;gap:10px;margin-bottom:18px}h1{font-size:27px;line-height:1.05;margin:0}.subtitle{color:#a7a7ad;font-size:14px;line-height:1.45;margin:0}.badges{display:flex;gap:8px;flex-wrap:wrap}.badge{font-size:11px;font-weight:800;padding:6px 9px;border-radius:999px;background:#1a1a1e;border:1px solid #29292f;color:#d7d7dc}.badge.global{color:#9ee7bb;background:#0d2116;border-color:#1e5132}
+    .toolbar{position:sticky;top:0;z-index:4;padding:10px 0 12px;background:linear-gradient(#050506 75%,transparent)}.search{width:100%;border:1px solid #2b2b30;background:#111114;color:#fff;border-radius:14px;padding:13px 14px;font-size:16px;outline:none}.search:focus{border-color:#666672}
+    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}@media(min-width:720px){.grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+    .card{border:1px solid #242429;background:#101013;border-radius:16px;padding:12px;display:grid;gap:9px;min-width:0}.card.changed{border-color:#2f7d4b;background:#0d1710}.preview{height:66px;border-radius:12px;background:#17171b;display:grid;place-items:center;overflow:hidden;color:#fff}.preview svg{max-width:42px;max-height:42px;width:42px;height:42px}.name{font-size:12px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.state{font-size:10px;color:#85858d}.card.changed .state{color:#74d89a}.edit{border:0;border-radius:10px;background:#232329;color:#fff;padding:9px;font-weight:750}
+    dialog{width:min(94vw,680px);border:1px solid #323238;border-radius:22px;background:#111114;color:#fff;padding:0;box-shadow:0 20px 80px #000b}dialog::backdrop{background:#000b}.sheet{padding:18px;display:grid;gap:14px}.sheet-head{display:flex;align-items:center;justify-content:space-between;gap:12px}.sheet h2{margin:0;font-size:20px}.close{border:0;background:#24242a;color:#fff;border-radius:999px;width:34px;height:34px;font-size:20px}.big-preview{height:120px;border-radius:16px;background:#19191d;display:grid;place-items:center}.big-preview svg{width:72px;height:72px;max-width:72px;max-height:72px}.label{font-size:12px;font-weight:800;color:#c8c8cf}.textarea{width:100%;min-height:180px;resize:vertical;border:1px solid #303037;background:#08080a;color:#f6f6f7;border-radius:14px;padding:12px;font:12px ui-monospace,SFMono-Regular,Menlo,monospace;outline:none}.textarea:focus{border-color:#6d6d79}.hint{font-size:12px;color:#95959d;line-height:1.4}.actions{display:grid;grid-template-columns:1fr 1fr;gap:9px}.primary,.secondary,.danger{border:0;border-radius:12px;padding:12px;font-weight:800}.primary{background:#f3f3f5;color:#101012}.secondary{background:#25252b;color:#fff}.danger{background:#2b1517;color:#ff9da6}.full{grid-column:1/-1}
+    .bottom{position:fixed;left:0;right:0;bottom:0;padding:12px 16px calc(12px + env(safe-area-inset-bottom));background:rgba(10,10,12,.92);backdrop-filter:blur(18px);border-top:1px solid #242429;z-index:5}.bottom-inner{max-width:980px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:9px}.counter{grid-column:1/-1;text-align:center;font-size:11px;color:#9a9aa2}.file{display:none}.empty{grid-column:1/-1;border:1px dashed #303037;border-radius:16px;padding:24px;text-align:center;color:#8f8f97}
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <h1>Editor global de ícones</h1>
+      <p class="subtitle">Edite os ícones internos usados pela versão Oficial e pela Beta. Cole um SVG completo em cada ícone. As alterações exportadas são preparadas para entrar no código real do projeto, não apenas neste aparelho.</p>
+      <div class="badges"><span class="badge global">GLOBAL</span><span class="badge">OFICIAL</span><span class="badge">BETA</span><span class="badge" id="versionBadge">Editor 1.0.0</span></div>
+    </header>
+    <div class="toolbar"><input id="search" class="search" type="search" placeholder="Buscar ícone por nome…" autocomplete="off" /></div>
+    <section id="grid" class="grid"></section>
+  </div>
+
+  <dialog id="dialog">
+    <div class="sheet">
+      <div class="sheet-head"><div><div class="label">Ícone selecionado</div><h2 id="dialogName"></h2></div><button class="close" id="closeDialog" aria-label="Fechar">×</button></div>
+      <div class="big-preview" id="dialogPreview"><span>SVG</span></div>
+      <div><div class="label">Código SVG substituto</div><textarea id="svgInput" class="textarea" spellcheck="false" placeholder='<svg viewBox="0 0 24 24" ...>...</svg>'></textarea></div>
+      <div id="validation" class="hint">Cole um SVG completo. O preview será atualizado automaticamente.</div>
+      <div class="actions">
+        <button class="secondary" id="pasteButton">Colar SVG</button>
+        <button class="primary" id="saveButton">Salvar alteração</button>
+        <button class="danger full" id="restoreButton">Restaurar ícone original</button>
+      </div>
+    </div>
+  </dialog>
+
+  <div class="bottom"><div class="bottom-inner">
+    <div class="counter" id="counter">0 alterações preparadas</div>
+    <button class="secondary" id="importButton">Importar JSON</button>
+    <button class="primary" id="exportButton">Preparar atualização global</button>
+    <input class="file" id="fileInput" type="file" accept="application/json,.json" />
+  </div></div>
+
+<script>
+const ICONS = [
+  "home","receipt","plus","target","chart","homeTab","receiptTab","plusTab","planTab","analysisTab","analysisPieTab","eye","eyeOff",
+  "settings","arrowUp","arrowDown","arrowRight","import","transfer","sparkles","wallet","card","bank","search","close","check","edit",
+  "trash","chevron","food","basket","car","heart","smile","repeat","briefcase","income","alert","trend","down","up","coins","file","info",
+  "calendar","download","upload","rule","clock","filter","more"
+];
+const LABELS = {
+  home:"Início",receipt:"Recibo",plus:"Adicionar",target:"Meta",chart:"Gráfico",homeTab:"Aba Início",receiptTab:"Aba Registros",plusTab:"Aba Adicionar",planTab:"Aba Planejamento",analysisTab:"Aba Análise",analysisPieTab:"Aba Análise circular",eye:"Mostrar valores",eyeOff:"Ocultar valores",settings:"Ajustes",arrowUp:"Seta subir",arrowDown:"Seta descer",arrowRight:"Seta direita",import:"Importar",transfer:"Transferência",sparkles:"Destaque",wallet:"Carteira",card:"Cartão",bank:"Banco",search:"Buscar",close:"Fechar",check:"Confirmar",edit:"Editar",trash:"Excluir",chevron:"Avançar",food:"Alimentação",basket:"Compras",car:"Transporte",heart:"Saúde",smile:"Lazer",repeat:"Recorrente",briefcase:"Trabalho",income:"Renda",alert:"Alerta",trend:"Tendência",down:"Expandir",up:"Recolher",coins:"Moedas",file:"Arquivo",info:"Informações",calendar:"Calendário",download:"Baixar",upload:"Enviar",rule:"Regra",clock:"Relógio",filter:"Filtro",more:"Mais"
+};
+const placeholder = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><path d="M8 12h8M12 8v8"/></svg>`;
+let overrides = {};
+let selected = null;
+const grid = document.getElementById('grid');
+const search = document.getElementById('search');
+const dialog = document.getElementById('dialog');
+const dialogName = document.getElementById('dialogName');
+const dialogPreview = document.getElementById('dialogPreview');
+const svgInput = document.getElementById('svgInput');
+const validation = document.getElementById('validation');
+const counter = document.getElementById('counter');
+
+function sanitizePreview(svg){
+  if(!svg || !/^\s*<svg\b/i.test(svg) || !/<\/svg>\s*$/i.test(svg)) return null;
+  if(/<\s*(script|iframe|object|embed)\b/i.test(svg)) return null;
+  return svg.replace(/on[a-z]+\s*=\s*(["']).*?\1/gi,'');
+}
+function renderPreview(target, svg, original=false){
+  const safe = sanitizePreview(svg);
+  target.innerHTML = safe || placeholder;
+  target.title = original ? 'Preview genérico do ícone original' : 'Preview do SVG escolhido';
+}
+function render(){
+  const term = search.value.trim().toLowerCase();
+  const visible = ICONS.filter(name => !term || name.toLowerCase().includes(term) || (LABELS[name]||'').toLowerCase().includes(term));
+  grid.innerHTML = '';
+  if(!visible.length){grid.innerHTML='<div class="empty">Nenhum ícone encontrado.</div>';return;}
+  visible.forEach(name=>{
+    const changed = !!overrides[name];
+    const card = document.createElement('article');
+    card.className = 'card' + (changed ? ' changed' : '');
+    card.innerHTML = `<div class="preview"></div><div><div class="name">${LABELS[name]||name}</div><div class="state">${name} · ${changed?'SVG personalizado':'original'}</div></div><button class="edit">${changed?'Editar SVG':'Substituir'}</button>`;
+    renderPreview(card.querySelector('.preview'), overrides[name] || placeholder, !changed);
+    card.querySelector('.edit').onclick=()=>openEditor(name);
+    grid.appendChild(card);
+  });
+  updateCounter();
+}
+function openEditor(name){
+  selected=name; dialogName.textContent=`${LABELS[name]||name} · ${name}`; svgInput.value=overrides[name]||''; updateDialogPreview(); dialog.showModal();
+}
+function updateDialogPreview(){
+  const value=svgInput.value.trim(); const safe=sanitizePreview(value);
+  renderPreview(dialogPreview, value || placeholder, !value);
+  validation.textContent = !value ? 'Nenhuma substituição salva: o app continuará usando o ícone original.' : safe ? 'SVG válido para preview. Toque em “Salvar alteração”.' : 'SVG inválido. Use um <svg> completo e não inclua script, iframe, object ou embed.';
+  validation.style.color = !value ? '#95959d' : safe ? '#7ddb9f' : '#ff8e98';
+}
+function updateCounter(){
+  const count=Object.keys(overrides).length; counter.textContent=`${count} ${count===1?'alteração preparada':'alterações preparadas'} · aplicação global via GitHub`;
+}
+svgInput.addEventListener('input',updateDialogPreview);
+search.addEventListener('input',render);
+document.getElementById('closeDialog').onclick=()=>dialog.close();
+document.getElementById('saveButton').onclick=()=>{
+  const value=svgInput.value.trim();
+  if(!value){delete overrides[selected];dialog.close();render();return;}
+  if(!sanitizePreview(value)){alert('O código não parece ser um SVG válido.');return;}
+  overrides[selected]=value; dialog.close(); render();
+};
+document.getElementById('restoreButton').onclick=()=>{delete overrides[selected];dialog.close();render();};
+document.getElementById('pasteButton').onclick=async()=>{try{svgInput.value=await navigator.clipboard.readText();updateDialogPreview();}catch{alert('O navegador não permitiu colar automaticamente. Toque e segure no campo e escolha Colar.')}};
+document.getElementById('importButton').onclick=()=>document.getElementById('fileInput').click();
+document.getElementById('fileInput').onchange=async e=>{
+  const file=e.target.files?.[0]; if(!file)return;
+  try{const data=JSON.parse(await file.text()); const incoming=data.icons||data; if(!incoming||typeof incoming!=='object')throw new Error(); overrides={}; for(const [name,svg] of Object.entries(incoming)){if(ICONS.includes(name)&&sanitizePreview(String(svg)))overrides[name]=String(svg)} render();}catch{alert('Arquivo JSON inválido.');} e.target.value='';
+};
+document.getElementById('exportButton').onclick=()=>{
+  const payload={version:1,updatedAt:new Date().toISOString(),scope:'both',icons:overrides};
+  const blob=new Blob([JSON.stringify(payload,null,2)+'\n'],{type:'application/json'});
+  const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='icon-overrides.json'; a.click(); setTimeout(()=>URL.revokeObjectURL(url),1000);
+  alert('Arquivo global preparado. Envie o icon-overrides.json neste chat e eu aplico no GitHub para Oficial e Beta.');
+};
+fetch('./icon-overrides.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(data=>{if(data?.icons){for(const [name,svg] of Object.entries(data.icons)){if(ICONS.includes(name)&&sanitizePreview(String(svg)))overrides[name]=String(svg)}}render()}).catch(render);
+render();
+</script>
+</body>
+</html>
