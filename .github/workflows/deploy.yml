@@ -21,7 +21,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  STABLE_RELEASE: "1.1.1"
+  STABLE_RELEASE: "1.1.2"
   BETA_LABEL: "1.2.0-beta.${{ github.run_number }}"
   PUBLIC_BASE: "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}"
 
@@ -96,6 +96,18 @@ jobs:
           python3 -m py_compile generate_valid_pwa_icons.py manual_pwa_hardening.py verify_site.py
           python3 generate_valid_pwa_icons.py
           python3 manual_pwa_hardening.py
+
+      - name: Remover avisos de dados de demonstração
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          style = '<style data-hide-demo-notice>.header-demo-info{display:none!important}</style>'
+          for path in (Path('_site/index.html'), Path('_site/beta/index.html')):
+              text = path.read_text(encoding='utf-8')
+              if 'data-hide-demo-notice' not in text:
+                  text = text.replace('</head>', style + '\n</head>', 1)
+              path.write_text(text, encoding='utf-8')
+          PY
 
       - name: Testar arquivos, links, dados separados e ícones
         run: python3 verify_site.py _site
