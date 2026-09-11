@@ -48,6 +48,9 @@ jobs:
           cache: npm
           cache-dependency-path: source/package-lock.json
 
+      - name: Preservar o ícone próprio da Beta
+        run: cp beta/apple-touch-icon.png source/public/apple-touch-icon.png
+
       - name: Compilar a versão Beta
         working-directory: source
         run: |
