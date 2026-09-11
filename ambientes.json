@@ -1,13 +1,13 @@
 {
   "official": {
     "path": "./",
-    "release": "1.1.3",
+    "release": "1.1.4",
     "branch": "stable",
     "database": "meu-dinheiro-inteligente"
   },
   "beta": {
     "path": "./beta/",
-    "release": "1.2.0-beta.57",
+    "release": "1.2.0-beta.59",
     "branch": "main",
     "database": "meu-dinheiro-inteligente-beta"
   },
