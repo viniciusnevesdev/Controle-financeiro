@@ -1,6 +1,6 @@
 {
   "environment": "production",
-  "release": "1.1.0",
+  "release": "1.1.1",
   "branch": "stable",
   "database": "meu-dinheiro-inteligente",
   "fallback": "meu-dinheiro-inteligente-state",
