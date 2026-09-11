@@ -48,9 +48,6 @@ jobs:
           cache: npm
           cache-dependency-path: source/package-lock.json
 
-      - name: Preservar o ícone próprio da Beta
-        run: cp beta/apple-touch-icon.png source/public/apple-touch-icon.png
-
       - name: Compilar a versão Beta
         working-directory: source
         run: |
@@ -69,6 +66,26 @@ jobs:
 
       - name: Montar Oficial, Beta, menu e ferramentas
         run: python3 prepare_environments.py
+
+      - name: Aplicar ícones aprovados no Menu Geral
+        run: |
+          mkdir -p _site/icons _site/beta/icons
+          cp source/public/brand-icons/icon-finance-20260911.jpg _site/icons/icon-finance-20260911.jpg
+          cp source/public/brand-icons/icon-menu-20260911.jpg _site/icons/icon-menu-20260911.jpg
+          cp source/public/brand-icons/icon-beta-20260911.jpg _site/beta/icons/icon-beta-20260911.jpg
+          python3 - <<'PY'
+          from pathlib import Path
+          files = [Path('_site/menu.html'), Path('_site/menu/index.html')]
+          for path in files:
+              text = path.read_text(encoding='utf-8')
+              is_alias = path.parent.name == 'menu'
+              p = '../' if is_alias else './'
+              text = text.replace(f'{p}icons/menu.svg', f'{p}icons/icon-menu-20260911.jpg?v=20260911')
+              text = text.replace(f'{p}apple-touch-icon.png', f'{p}icons/icon-finance-20260911.jpg?v=20260911')
+              text = text.replace(f'{p}beta/apple-touch-icon.png', f'{p}beta/icons/icon-beta-20260911.jpg?v=20260911')
+              text = text.replace('type="image/svg+xml"', 'type="image/jpeg"', 1)
+              path.write_text(text, encoding='utf-8')
+          PY
 
       - name: Preparar e preservar os ícones PWA
         run: |
