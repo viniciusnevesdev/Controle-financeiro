@@ -1,6 +1,6 @@
-const CACHE = "meu-dinheiro-oficial-1.0.0-env3";
+const CACHE = "meu-dinheiro-oficial-1.0.1-icon-20260911";
 const CACHE_PREFIX = "meu-dinheiro-oficial-";
-const CORE = ["./", "./index.html", "./manifest.webmanifest", "./apple-touch-icon.png", "./assets/index--FVaWfUS.js", "./assets/index-BVjSN_JA.css"];
+const CORE = ["./", "./index.html", "./manifest.webmanifest", "./icons/icon-finance-20260911.jpg", "./assets/index--FVaWfUS.js", "./assets/index-BVjSN_JA.css"];
 
 self.addEventListener("install", (event) => {
   self.skipWaiting();
