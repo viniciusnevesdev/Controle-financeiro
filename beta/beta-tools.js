@@ -2,7 +2,7 @@
 (() => {
   'use strict';
 
-  const BETA_RELEASE = '1.1.0-beta.45';
+  const BETA_RELEASE = '1.2.0-beta.49';
   const PROD_DB = 'meu-dinheiro-inteligente';
   const BETA_DB = 'meu-dinheiro-inteligente-beta';
   const PROD_FALLBACK = 'meu-dinheiro-inteligente-state';
