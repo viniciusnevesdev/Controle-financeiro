@@ -1,6 +1,6 @@
 {
   "environment": "beta",
-  "release": "1.2.0-beta.49",
+  "release": "1.2.0-beta.52",
   "branch": "main",
   "database": "meu-dinheiro-inteligente-beta",
   "fallback": "meu-dinheiro-inteligente-beta-state",
