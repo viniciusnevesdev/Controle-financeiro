@@ -1,4 +1,4 @@
-const CACHE = "meu-dinheiro-beta-1.2.0-beta.60-env3";
+const CACHE = "meu-dinheiro-beta-1.2.0-beta.61-env3";
 const CACHE_PREFIX = "meu-dinheiro-beta-";
 const CORE = ["./", "./index.html", "./manifest.webmanifest", "./apple-touch-icon.png", "./assets/index-Q11s_gvu.js", "./assets/index-C8MuaHNb.css"];
 
