@@ -1,6 +1,6 @@
-const CACHE = "meu-dinheiro-oficial-1.1.8-icon-20260912b";
+const CACHE = "meu-dinheiro-oficial-icon-20260912d";
 const CACHE_PREFIX = "meu-dinheiro-oficial-";
-const CORE = ["./", "./index.html", "./manifest.webmanifest", "./icons/icon-official-20260912.jpg", "./assets/index-BILPSsCY.js", "./assets/index-BVjSN_JA.css"];
+const CORE = ["./", "./index.html", "./manifest.webmanifest", "./icons/icon-official-20260912d.jpg", "./assets/index-BILPSsCY.js", "./assets/index-BVjSN_JA.css"];
 
 self.addEventListener("install", (event) => {
   self.skipWaiting();
