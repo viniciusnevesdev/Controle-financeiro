@@ -1,4 +1,4 @@
-const CACHE = "meu-dinheiro-oficial-1.1.6-icon-20260912";
+const CACHE = "meu-dinheiro-oficial-1.1.7-icon-20260912";
 const CACHE_PREFIX = "meu-dinheiro-oficial-";
 const CORE = ["./", "./index.html", "./manifest.webmanifest", "./icons/icon-official-20260912.jpg", "./assets/index-BILPSsCY.js", "./assets/index-BVjSN_JA.css"];
 
