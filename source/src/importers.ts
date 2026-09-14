@@ -89,22 +89,15 @@ export const suggestCategory = (description: string, rules: CategoryRule[], fall
 const importDetails = (originalDescription: string, kind: "expense" | "income", state: AppState) => {
   const rule = findImportRule(originalDescription, state.rules);
   const place = rule?.place?.trim() || cleanBankPlace(originalDescription);
-  const titleSuggestions = state.transactions
-    .filter((transaction) => transaction.place && normalize(transaction.place) === normalize(place))
-    .sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time))
-    .map((transaction) => transaction.description)
-    .filter((title, index, list) => !isPlaceholderTitle(title) && list.indexOf(title) === index)
-    .slice(0, 3);
-  const description = rule?.title?.trim() || titleSuggestions[0] || (kind === "expense" ? "Compra não detalhada" : "Entrada não detalhada");
+  const description = kind === "expense" ? "Compra não detalhada" : "Entrada não detalhada";
   const categoryId = rule?.categoryId || "other";
-  const confidence = rule?.title && categoryId !== "other" ? "certain" as const : titleSuggestions.length ? "suggested" as const : "unknown" as const;
+  const confidence = rule && categoryId !== "other" ? "certain" as const : "unknown" as const;
   return {
     description,
     place,
     categoryId,
     confidence,
-    titleSuggestions,
-    needsReview: confidence !== "certain" || categoryId === "other" || isPlaceholderTitle(description),
+    needsReview: isPlaceholderTitle(description) || categoryId === "other",
     originalDescription,
     rememberRule: false,
     pattern: simplifyBankText(originalDescription),
