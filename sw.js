@@ -1,6 +1,6 @@
-const CACHE = "meu-dinheiro-oficial-1.1.7-env3";
+const CACHE = "meu-dinheiro-oficial-1.1.8-env3";
 const CACHE_PREFIX = "meu-dinheiro-oficial-";
-const CORE = ["./", "./index.html", "./manifest.webmanifest", "./apple-touch-icon.png", "./assets/index-C5zVoltb.js", "./assets/index-CRVaehNX.css"];
+const CORE = ["./", "./index.html", "./manifest.webmanifest", "./apple-touch-icon.png", "./assets/index-dL0TG_c-.js", "./assets/index-C_4OH_-4.css"];
 
 self.addEventListener("install", (event) => {
   self.skipWaiting();
