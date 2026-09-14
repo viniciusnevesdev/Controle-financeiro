@@ -1,0 +1,19 @@
+:root[data-theme="dark"] {
+  color: #f2f2f2;
+  background: #000;
+  --ink: #f2f2f2;
+  --muted: #a0a0a0;
+  --line: #2a2a2a;
+  --page: #050505;
+  --page-outer: #000;
+  --surface: #111;
+  --surface-soft: #181818;
+  --surface-tint: #151515;
+  --input-border: #303030;
+  --header: rgba(5, 5, 5, .92);
+  --nav: rgba(17, 17, 17, .96);
+  --sheet: #0b0b0b;
+  --track: #242424;
+  --overlay: rgba(0, 0, 0, .72);
+  --shadow: 0 12px 38px rgba(0, 0, 0, .42), 0 2px 9px rgba(0, 0, 0, .32);
+}
