@@ -62,7 +62,6 @@ export type CategoryRule = {
   keyword: string;
   categoryId: string;
   place?: string;
-  title?: string;
   matchMode?: "contains" | "startsWith" | "exact" | "simplified";
 };
 
@@ -129,7 +128,6 @@ export type ImportCandidate = {
   originalDescription: string;
   needsReview: boolean;
   confidence: "certain" | "suggested" | "unknown";
-  titleSuggestions: string[];
   rememberRule: boolean;
   pattern: string;
   amount: number;
