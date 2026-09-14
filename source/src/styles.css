@@ -682,3 +682,151 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
+
+
+/* Aprendizado de importações: cada lançamento mantém sua própria descrição. */
+.transaction-classification-card,
+.import-learning-card {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  padding: 10px;
+  display: grid;
+  gap: 9px;
+}
+.transaction-classification-card {
+  background: color-mix(in srgb, var(--surface) 84%, var(--surface-tint));
+}
+.classification-heading,
+.learning-heading {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+}
+.classification-heading > span,
+.learning-heading > span {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--green-2) 11%, var(--surface));
+  color: var(--green-2);
+}
+.classification-heading > div,
+.learning-heading > div {
+  display: grid;
+  gap: 2px;
+}
+.classification-heading strong,
+.learning-heading strong {
+  font-size: 10.5px;
+}
+.classification-heading small,
+.learning-heading small {
+  color: var(--muted);
+  font-size: 8.5px;
+  line-height: 1.35;
+}
+.import-learning-card {
+  border-color: color-mix(in srgb, var(--green-2) 28%, var(--line));
+  background: color-mix(in srgb, var(--green-2) 5%, var(--surface));
+}
+.learning-switch {
+  min-height: 56px;
+}
+.learning-impact {
+  display: grid;
+  gap: 7px;
+  border-top: 1px solid color-mix(in srgb, var(--green-2) 18%, var(--line));
+  padding-top: 9px;
+}
+.learning-impact p {
+  margin: 0;
+  padding: 8px 9px;
+  border-radius: 10px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 6px;
+  font-size: 9px;
+  line-height: 1.4;
+}
+.learning-impact p svg {
+  margin-top: 1px;
+}
+.learning-repeat {
+  background: #edf8f1;
+  color: #286547;
+}
+.learning-never-repeat {
+  background: #f4f5f4;
+  color: #58635c;
+}
+.compact-bank-description {
+  padding: 8px 9px;
+  background: var(--surface);
+}
+.compact-bank-description small {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 8px;
+  line-height: 1.35;
+}
+.apply-history-button {
+  min-height: 48px;
+  border: 1px dashed color-mix(in srgb, var(--green-2) 54%, var(--line));
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--green-2);
+  padding: 8px 10px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  text-align: left;
+  cursor: pointer;
+}
+.apply-history-button > span {
+  display: grid;
+  gap: 2px;
+}
+.apply-history-button strong {
+  font-size: 9.5px;
+}
+.apply-history-button small {
+  color: var(--muted);
+  font-size: 8px;
+  line-height: 1.35;
+}
+.apply-history-button:disabled {
+  opacity: .45;
+  cursor: default;
+}
+.import-learning-actions label {
+  align-items: flex-start;
+}
+.import-learning-actions label > span {
+  display: grid;
+  gap: 2px;
+}
+.import-learning-actions label strong {
+  color: var(--ink);
+  font-size: 9px;
+}
+.import-learning-actions label small,
+.import-learning-scope {
+  color: var(--muted);
+  font-size: 8px;
+  line-height: 1.35;
+}
+.import-learning-scope {
+  margin: -2px 0 0;
+  padding-left: 20px;
+}
+.import-edit-grid .form-field small {
+  font-size: 8px;
+  line-height: 1.3;
+}
