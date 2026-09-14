@@ -22,6 +22,14 @@ type Modal =
   | { type: "availableInfo" }
   | null;
 
+type HistoryImportUpdate = {
+  pattern: string;
+  place?: string;
+  categoryId: string;
+  before: string;
+  excludeId?: string;
+};
+
 const money = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 const uid = (prefix: string) => prefix + "-" + (globalThis.crypto?.randomUUID?.() || Math.random().toString(36).slice(2));
 const localISODate = (date = new Date()) => {
@@ -95,6 +103,12 @@ const mergeLearnedRules = (current: CategoryRule[], additions: CategoryRule[]) =
   const key = simplifyBankText(addition.keyword) || addition.keyword.toLowerCase().trim();
   return [addition, ...rules.filter((rule) => (simplifyBankText(rule.keyword) || rule.keyword.toLowerCase().trim()) !== key)];
 }, current);
+const isImportedTransaction = (transaction: Transaction) => transaction.source === "csv" || transaction.source === "ofx";
+const importMoment = (transaction: Pick<Transaction, "date" | "time">) => transaction.date + "T" + (transaction.time || "00:00");
+const hasSameImportPattern = (transaction: Transaction, pattern: string) => !!pattern
+  && isImportedTransaction(transaction)
+  && !!transaction.originalDescription
+  && simplifyBankText(transaction.originalDescription) === pattern;
 
 function PigMark() {
   return <svg viewBox="0 0 48 38" aria-hidden="true"><path d="M7 15c0-7 7-12 17-12 5 0 9 1 12 4l6-2-2 7c2 2 3 5 3 8 0 7-5 12-13 14v4h-6v-3h-8v3h-6v-5c-5-3-7-9-7-15V9l5 4"/><circle cx="33" cy="15" r="1.4"/><path d="M20 8c3-2 7-2 10 0M43 22h3"/></svg>;
@@ -335,7 +349,7 @@ function Field({ label, children, hint }: { label: string; children: ReactNode; 
   return <label className="form-field"><span>{label}</span>{children}{hint && <small>{hint}</small>}</label>;
 }
 
-function TransactionSheet({ state, kind, existing, onClose, onSave, onDelete, onState }: { state: AppState; kind: TransactionKind; existing?: Transaction; onClose: () => void; onSave: (transactions: Transaction[], replacedId?: string, learnedRules?: CategoryRule[]) => void; onDelete: (id: string) => void; onState: (state: AppState) => void }) {
+function TransactionSheet({ state, kind, existing, onClose, onSave, onDelete, onState }: { state: AppState; kind: TransactionKind; existing?: Transaction; onClose: () => void; onSave: (transactions: Transaction[], replacedId?: string, learnedRules?: CategoryRule[], historyUpdate?: HistoryImportUpdate) => void; onDelete: (id: string) => void; onState: (state: AppState) => void }) {
   const [draftKind, setDraftKind] = useState<TransactionKind>(existing?.kind || kind);
   const [description, setDescription] = useState(existing?.description || "");
   const [place, setPlace] = useState(existing?.place || "");
@@ -353,23 +367,36 @@ function TransactionSheet({ state, kind, existing, onClose, onSave, onDelete, on
   const [showCategories, setShowCategories] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(!!existing);
   const value = Math.abs(parseMoney(amount));
+  const imported = !!existing && isImportedTransaction(existing) && !!existing.originalDescription;
+  const importPattern = imported ? simplifyBankText(existing?.originalDescription || "") : "";
+  const historyMatchCount = imported && existing && importPattern
+    ? state.transactions.filter((transaction) => transaction.id !== existing.id && hasSameImportPattern(transaction, importPattern) && importMoment(transaction) < importMoment(existing)).length
+    : 0;
+  const titleLabel = draftKind === "income" ? "O que você recebeu neste lançamento?" : draftKind === "transfer" ? "Motivo da transferência" : "O que você comprou ou pagou neste lançamento?";
+  const titlePlaceholder = draftKind === "income" ? "Ex.: Atendimento de unhas" : draftKind === "transfer" ? "Ex.: Guardar na reserva" : "Ex.: Produtos de limpeza";
+  const placeLabel = draftKind === "income" ? "Quem enviou ou de onde veio?" : "Local da compra ou pagamento";
+  const placePlaceholder = draftKind === "income" ? "Ex.: Cliente Ana ou Hotmart" : "Ex.: Mercado Livre";
 
   const changeKind = (next: TransactionKind) => { setDraftKind(next); if (next === "income") setCategoryId("salary"); if (next === "transfer") setCategoryId("other"); };
-  const save = (confirmAsIs = false) => {
+  const save = (confirmAsIs = false, updateHistory = false) => {
     if (!description.trim() || !value || !accountId || (draftKind === "transfer" && (!destinationAccountId || destinationAccountId === accountId))) return;
-    const imported = existing?.source === "csv" || existing?.source === "ofx";
     const needsReview = imported ? !confirmAsIs && (isPlaceholderTitle(description) || categoryId === "other") : false;
     const base: Transaction = { id: existing?.id || uid("tx"), kind: draftKind, description: description.trim(), place: draftKind === "transfer" ? undefined : place.trim() || undefined, originalDescription: existing?.originalDescription, needsReview, amount: value, date, time, categoryId, accountId, destinationAccountId: draftKind === "transfer" ? destinationAccountId : undefined, paymentMethod: draftKind === "transfer" ? "transfer" : paymentMethod, notes: notes.trim(), source: existing?.source || "manual", importFingerprint: existing?.importFingerprint };
-    const learnedRule = rememberRule && existing?.originalDescription ? { id: uid("rule"), keyword: existing.originalDescription, categoryId, place: place.trim() || undefined, title: !isPlaceholderTitle(description) ? description.trim() : undefined, matchMode: "simplified" as const } : undefined;
+    const learnedRule = rememberRule && imported && existing?.originalDescription
+      ? { id: uid("rule"), keyword: existing.originalDescription, categoryId, place: place.trim() || undefined, matchMode: "simplified" as const }
+      : undefined;
+    const historyUpdate = updateHistory && learnedRule && importPattern
+      ? { pattern: importPattern, place: base.place, categoryId, before: importMoment(base), excludeId: existing?.id }
+      : undefined;
     if (!existing && draftKind === "expense" && installments > 1) {
       const group = uid("installment");
       const each = Math.round(value / installments * 100) / 100;
-      const list = Array.from({ length: installments }, (_, index): Transaction => ({ ...base, id: uid("tx"), amount: index === installments - 1 ? Math.round((value - each * (installments - 1)) * 100) / 100 : each, date: addMonths(date, index), description: `${description.trim()} (${index + 1}/${installments})`, source: "installment", recurrenceGroup: group, installment: { current: index + 1, total: installments } }));
+      const list = Array.from({ length: installments }, (_, index): Transaction => ({ ...base, id: uid("tx"), amount: index === installments - 1 ? Math.round((value - each * (installments - 1)) * 100) / 100 : each, date: addMonths(date, index), description: description.trim() + " (" + (index + 1) + "/" + installments + ")", source: "installment", recurrenceGroup: group, installment: { current: index + 1, total: installments } }));
       onSave(list, undefined, learnedRule ? [learnedRule] : []);
     } else if (!existing && recurring && draftKind !== "transfer") {
       const group = uid("recurring");
       onSave(Array.from({ length: 6 }, (_, index): Transaction => ({ ...base, id: uid("tx"), date: addMonths(date, index), recurrenceGroup: group })), undefined, learnedRule ? [learnedRule] : []);
-    } else onSave([base], existing?.id, learnedRule ? [learnedRule] : []);
+    } else onSave([base], existing?.id, learnedRule ? [learnedRule] : [], historyUpdate);
   };
   const submit = (event: FormEvent) => { event.preventDefault(); save(false); };
   return <Sheet title={existing ? "Editar" : "Adicionar"} onClose={onClose}>
@@ -386,28 +413,42 @@ function TransactionSheet({ state, kind, existing, onClose, onSave, onDelete, on
         {!existing && draftKind === "expense" && installments > 1 && <small>{installments} parcelas de aproximadamente {money.format(value / installments || 0)}</small>}
       </div>
 
-      {existing?.needsReview && <div className="review-banner"><Icon name="edit" size={18} /><span><strong>Este lançamento precisa de detalhes</strong><small>Complete o título e a categoria ou confirme que deseja mantê-lo assim.</small></span></div>}
+      {existing?.needsReview && <div className="review-banner"><Icon name="edit" size={18} /><span><strong>Falta identificar este lançamento</strong><small>Descreva este lançamento. Se quiser, o app pode aprender apenas o local e a categoria.</small></span></div>}
 
-      <Field label={draftKind === "income" ? "O que você recebeu?" : draftKind === "transfer" ? "Motivo da transferência" : "O que você comprou ou pagou?"}><input value={description} onChange={(event) => setDescription(event.target.value)} placeholder={draftKind === "income" ? "Ex.: Atendimento de unhas" : draftKind === "transfer" ? "Ex.: Guardar na reserva" : "Ex.: Produtos de limpeza"} /></Field>
+      <Field label={titleLabel} hint={imported ? "Só este lançamento — esta descrição nunca será repetida nas próximas importações." : undefined}><input value={description} onChange={(event) => setDescription(event.target.value)} placeholder={titlePlaceholder} /></Field>
+
+      {draftKind !== "transfer" && <section className="transaction-classification-card">
+        <div className="classification-heading"><span><Icon name="rule" size={17} /></span><div><strong>Identificação do local</strong><small>Use um nome que você reconheça no seu extrato.</small></div></div>
+        <Field label={placeLabel} hint={imported ? "Pode ser usado para reconhecer o mesmo local em futuras importações, somente se você ativar a opção abaixo." : undefined}><input value={place} onChange={(event) => setPlace(event.target.value)} placeholder={placePlaceholder} /></Field>
+        <div className="category-field"><Field label="Categoria" hint={imported ? "Só será aplicada automaticamente no futuro se você escolher aprender." : undefined}><select value={categoryId} onChange={(event) => setCategoryId(event.target.value)}>{state.categories.map((category) => <option value={category.id} key={category.id}>{category.name}</option>)}</select></Field><button className="inline-config-button" type="button" onClick={() => setShowCategories(true)}><Icon name="filter" size={16} /> Ver e configurar categorias</button></div>
+      </section>}
+
+      {imported && draftKind !== "transfer" && <section className="import-learning-card">
+        <div className="learning-heading"><span><Icon name="repeat" size={18} /></span><div><strong>Ensinar para próximas importações</strong><small>Você decide exatamente o que a regra pode reaproveitar.</small></div></div>
+        <label className="toggle-row compact-toggle learning-switch"><span><strong>Usar local e categoria nas próximas importações</strong><small>Nada é reaproveitado sem ativar esta opção.</small></span><input type="checkbox" checked={rememberRule} onChange={(event) => setRememberRule(event.target.checked)} /></label>
+        {rememberRule && <div className="learning-impact">
+          <p className="learning-repeat"><Icon name="check" size={16} /><span><strong>Vai se repetir:</strong> {place.trim() || "a categoria escolhida"} e a categoria <b>{state.categories.find((category) => category.id === categoryId)?.name || "selecionada"}</b>.</span></p>
+          <p className="learning-never-repeat"><Icon name="info" size={16} /><span><strong>Nunca será repetido:</strong> o que você comprou ou recebeu, valor, data, horário e observação.</span></p>
+          <details className="bank-description compact-bank-description"><summary>Texto do extrato usado para reconhecer este local</summary><p>{existing?.originalDescription}</p><small>Números e códigos podem mudar; o app reconhece a parte em comum do texto.</small></details>
+          {historyMatchCount > 0 && <button className="apply-history-button" type="button" onClick={() => save(false, true)} disabled={!description.trim() || !value}><Icon name="repeat" size={18} /><span><strong>Salvar e atualizar {historyMatchCount} {historyMatchCount === 1 ? "transação anterior" : "transações anteriores"}</strong><small>Atualiza somente local e categoria das transações parecidas.</small></span></button>}
+        </div>}
+      </section>}
 
       <button className="automatic-date" type="button" onClick={() => setDetailsOpen(true)}><Icon name="clock" size={17} /><span><strong>{displayDate(date)} às {time}</strong><small>Data e horário preenchidos automaticamente</small></span>{!detailsOpen && <Icon name="edit" size={15} />}</button>
 
-      <button className={"optional-details-toggle " + (detailsOpen ? "open" : "")} type="button" onClick={() => setDetailsOpen((open) => !open)}><Icon name="more" size={18} /><span>{detailsOpen ? "Ocultar detalhes opcionais" : "Adicionar detalhes opcionais"}</span><Icon name="chevron" size={16} /></button>
+      <button className={"optional-details-toggle " + (detailsOpen ? "open" : "")} type="button" onClick={() => setDetailsOpen((open) => !open)}><Icon name="more" size={18} /><span>{detailsOpen ? "Ocultar outros detalhes" : "Adicionar outros detalhes"}</span><Icon name="chevron" size={16} /></button>
 
       {detailsOpen && <section className="transaction-optional-fields">
-          {draftKind !== "transfer" && <Field label={draftKind === "income" ? "Origem (opcional)" : "Local (opcional)"}><input value={place} onChange={(event) => setPlace(event.target.value)} placeholder={draftKind === "income" ? "Ex.: Cliente Ana ou Hotmart" : "Ex.: Mercado Livre"} /></Field>}
-          {draftKind !== "transfer" && <div className="category-field"><Field label="Categoria (opcional)"><select value={categoryId} onChange={(event) => setCategoryId(event.target.value)}>{state.categories.map((category) => <option value={category.id} key={category.id}>{category.name}</option>)}</select></Field><button className="inline-config-button" type="button" onClick={() => setShowCategories(true)}><Icon name="filter" size={16} /> Ver e configurar categorias</button></div>}
           <div className="form-grid"><Field label={draftKind === "transfer" ? "Conta de origem" : "Conta ou cartão (opcional)"}><select value={accountId} onChange={(event) => { setAccountId(event.target.value); if (destinationAccountId === event.target.value) setDestinationAccountId(state.accounts.find((account) => account.id !== event.target.value)?.id || ""); }}>{state.accounts.map((account) => <option value={account.id} key={account.id}>{account.name}</option>)}</select></Field>
           {draftKind === "transfer" ? <Field label="Conta de destino"><select value={destinationAccountId} onChange={(event) => setDestinationAccountId(event.target.value)}>{state.accounts.filter((account) => account.id !== accountId && account.type !== "credit").map((account) => <option value={account.id} key={account.id}>{account.name}</option>)}</select></Field> : <Field label="Pagamento (opcional)"><select value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value as PaymentMethod)}><option value="other">Não informar</option><option value="pix">Pix</option><option value="debit">Débito</option><option value="credit">Crédito</option><option value="cash">Dinheiro</option><option value="transfer">Transferência</option></select></Field>}</div>
           <div className="form-grid"><Field label="Data"><input type="date" value={date} onChange={(event) => setDate(event.target.value)} /></Field><Field label="Horário"><input type="time" value={time} onChange={(event) => setTime(event.target.value)} /></Field></div>
-          {!existing && draftKind === "expense" && <Field label="Parcelamento"><select value={installments} onChange={(event) => { setInstallments(Number(event.target.value)); if (Number(event.target.value) > 1) setRecurring(false); }}>{Array.from({ length: 24 }, (_, index) => <option key={index + 1} value={index + 1}>{index ? `${index + 1} parcelas` : "À vista"}</option>)}</select></Field>}
+          {!existing && draftKind === "expense" && <Field label="Parcelamento"><select value={installments} onChange={(event) => { setInstallments(Number(event.target.value)); if (Number(event.target.value) > 1) setRecurring(false); }}>{Array.from({ length: 24 }, (_, index) => <option key={index + 1} value={index + 1}>{index ? (index + 1) + " parcelas" : "À vista"}</option>)}</select></Field>}
           {!existing && draftKind !== "transfer" && installments === 1 && <label className="toggle-row"><span><strong>Repetir pelos próximos 6 meses</strong><small>Útil para salário, aluguel e assinaturas.</small></span><input type="checkbox" checked={recurring} onChange={(event) => setRecurring(event.target.checked)} /></label>}
-          <Field label="Observação (opcional)"><textarea value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Detalhes que podem ser úteis depois" rows={3} /></Field>
-          {existing?.originalDescription && <details className="bank-description"><summary>Ver descrição original do banco</summary><p>{existing.originalDescription}</p></details>}
-          {existing?.originalDescription && <SettingToggle compact title="Lembrar para próximas importações" description="Usa este local, categoria e título em descrições parecidas." checked={rememberRule} onChange={setRememberRule} />}
+          <Field label="Observação (opcional)" hint={imported ? "Fica somente neste lançamento." : undefined}><textarea value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Detalhes que podem ser úteis depois" rows={3} /></Field>
+          {existing?.originalDescription && !imported && <details className="bank-description"><summary>Ver descrição original do banco</summary><p>{existing.originalDescription}</p></details>}
       </section>}
 
-      <button className="primary-button transaction-save-button" type="submit" disabled={!description.trim() || !value}><Icon name="check" size={19} /> Salvar lançamento</button>
+      <button className="primary-button transaction-save-button" type="submit" disabled={!description.trim() || !value}><Icon name="check" size={19} /> {imported ? "Salvar somente este lançamento" : "Salvar lançamento"}</button>
       {existing?.needsReview && <button className="secondary-review-button" type="button" onClick={() => save(true)}><Icon name="check" size={18} /> Confirmar assim mesmo</button>}
       {existing && <button className="danger-button" type="button" onClick={() => onDelete(existing.id)}><Icon name="trash" size={18} /> Excluir lançamento</button>}
     </form>
@@ -447,28 +488,30 @@ function ImportSheet({ state, onClose, onImport, onState }: { state: AppState; o
   const downloadExample = () => downloadBlob("data;descricao;valor\n15/08/2026;Supermercado;-125,90\n16/08/2026;Pagamento cliente;350,00", "extrato-exemplo.csv", "text/csv;charset=utf-8");
   return <Sheet title="Importar extrato" subtitle="O arquivo é lido somente no aparelho. Nada é enviado para bancos ou servidores." onClose={onClose} wide>
     <div className="form import-form">
-      <div className="privacy-note"><Icon name="rule" /><span><strong>O app aprende com suas correções</strong><small>Regras anteriores preenchem local, título e categoria. O que estiver incerto pode ser revisado depois.</small></span></div>
+      <div className="privacy-note import-learning-note"><Icon name="rule" /><span><strong>O aprendizado é controlado por você</strong><small>As regras só repetem local e categoria. Descrição, valor, data, horário e observação nunca são copiados.</small></span></div>
       <button className="category-access-button standalone import-categories" type="button" onClick={() => setShowCategories(true)}><Icon name="filter" size={17} /> Ver e configurar categorias</button>
       <Field label="Conta do extrato"><select value={accountId} onChange={(event) => { setAccountId(event.target.value); setItems([]); setFilename(""); }}>{state.accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}</select></Field>
       <label className="file-picker"><Icon name="upload" size={26} /><strong>{filename || "Escolher arquivo CSV, OFX ou QFX"}</strong><small>Formatos usados pela maioria dos bancos</small><input type="file" accept=".csv,.ofx,.qfx,text/csv" onChange={handleFile} /></label>
       <button className="text-button" type="button" onClick={downloadExample}><Icon name="download" size={17} /> Baixar CSV de exemplo</button>
       {error && <div className="form-error"><Icon name="alert" size={18} />{error}</div>}
       {!!items.length && <>
-        <div className="import-summary detailed"><span><strong>{certainCount}</strong><small>por regras</small></span><span><strong>{suggestedCount}</strong><small>com sugestões</small></span><span><strong>{pendingCount}</strong><small>para revisar</small></span><span><strong>{items.filter((item) => item.duplicate).length}</strong><small>duplicados</small></span></div>
-        <p className="import-explanation">Você pode importar tudo agora. As movimentações incompletas receberão a tag <b>Revisar detalhes</b> no extrato.</p>
+        <div className="import-summary detailed"><span><strong>{certainCount}</strong><small>por regras</small></span><span><strong>{suggestedCount}</strong><small>prontos</small></span><span><strong>{pendingCount}</strong><small>para revisar</small></span><span><strong>{items.filter((item) => item.duplicate).length}</strong><small>duplicados</small></span></div>
+        <p className="import-explanation">Complete apenas o que pertence a cada lançamento. O aplicativo aprende somente quando você marcar essa opção.</p>
         <div className="import-list detailed-import-list">{items.map((item) => {
           const similarCount = items.filter((candidate) => candidate.pattern && candidate.pattern === item.pattern).length;
+          const titleLabel = item.kind === "income" ? "O que você recebeu neste lançamento?" : "O que você comprou ou pagou neste lançamento?";
+          const placeLabel = item.kind === "income" ? "Quem enviou ou de onde veio?" : "Local da compra ou pagamento";
           return <article className={"import-row import-detail-row " + (item.duplicate ? "duplicate" : "")} key={item.tempId}>
             <div className="import-row-top"><input type="checkbox" checked={item.selected} disabled={item.duplicate} onChange={(event) => updateItem(item.tempId, { selected: event.target.checked })} /><span><small>{displayDate(item.date)} · {item.time}{item.duplicate ? " · Já existe" : ""}</small><strong className={item.kind}>{item.kind === "expense" ? "−" : "+"}{money.format(item.amount)}</strong></span>{item.needsReview && !item.duplicate && <i className="review-tag">Revisar detalhes</i>}</div>
             <div className="import-edit-grid">
-              <Field label="Título — o que foi?"><input value={item.description} onChange={(event) => updateDetails(item, { description: event.target.value, confidence: "suggested" })} /></Field>
-              {!!item.titleSuggestions.length && <div className="title-suggestions"><small>Sugestões anteriores</small><div>{item.titleSuggestions.map((title) => <button type="button" key={title} onClick={() => updateDetails(item, { description: title, confidence: "suggested" })}>{title}</button>)}</div></div>}
-              <Field label={item.kind === "income" ? "Origem" : "Local"}><input value={item.place} onChange={(event) => updateDetails(item, { place: event.target.value })} /></Field>
-              <Field label="Categoria"><select value={item.categoryId} onChange={(event) => updateDetails(item, { categoryId: event.target.value })}>{state.categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></Field>
+              <Field label={titleLabel} hint="Fica somente nesta transação — nunca é usado como regra."><input value={item.description} onChange={(event) => updateDetails(item, { description: event.target.value, confidence: "suggested" })} /></Field>
+              <Field label={placeLabel} hint="Pode ser reconhecido depois, somente se você escolher aprender abaixo."><input value={item.place} onChange={(event) => updateDetails(item, { place: event.target.value })} /></Field>
+              <Field label="Categoria" hint="Pode ser aplicada nas próximas importações somente com a opção de aprender."><select value={item.categoryId} onChange={(event) => updateDetails(item, { categoryId: event.target.value })}>{state.categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></Field>
             </div>
-            <details className="original-import-description"><summary>Descrição original do banco</summary><p>{item.originalDescription}</p></details>
-            {similarCount > 1 && <button className="apply-similar-button" type="button" onClick={() => applyToSimilar(item)}><Icon name="repeat" size={16} /> Aplicar local e categoria às {similarCount} parecidas</button>}
-            {!item.duplicate && <div className="import-learning-actions"><label><input type="checkbox" checked={item.rememberRule} onChange={(event) => updateItem(item.tempId, { rememberRule: event.target.checked })} /> Lembrar nas próximas importações</label>{item.needsReview && <button type="button" onClick={() => updateItem(item.tempId, { needsReview: false })}>Confirmar assim mesmo</button>}</div>}
+            <details className="original-import-description"><summary>Texto original do extrato</summary><p>{item.originalDescription}</p></details>
+            {similarCount > 1 && <button className="apply-similar-button" type="button" onClick={() => applyToSimilar(item)}><Icon name="repeat" size={16} /> Aplicar local e categoria às {similarCount} linhas parecidas deste extrato</button>}
+            {!item.duplicate && <div className="import-learning-actions"><label><input type="checkbox" checked={item.rememberRule} onChange={(event) => updateItem(item.tempId, { rememberRule: event.target.checked })} /><span><strong>Aprender local e categoria</strong><small>Para futuras importações com este mesmo texto bancário.</small></span></label>{item.needsReview && <button type="button" onClick={() => updateItem(item.tempId, { needsReview: false })}>Confirmar assim mesmo</button>}</div>}
+            {!item.duplicate && item.rememberRule && <p className="import-learning-scope">Não reaproveita: descrição, valor, data, horário ou observação.</p>}
           </article>;
         })}</div>
         <button className="primary-button" disabled={!selected.length} onClick={() => onImport(selected)}>Importar {selected.length} {selected.length === 1 ? "lançamento" : "lançamentos"}{pendingCount ? " e revisar depois" : ""}</button>
@@ -497,16 +540,14 @@ function RulesSheet({ state, onClose, onChange }: { state: AppState; onClose: ()
   const [keyword, setKeyword] = useState("");
   const [categoryId, setCategoryId] = useState(state.categories[0]?.id || "");
   const [place, setPlace] = useState("");
-  const [title, setTitle] = useState("");
   const [matchMode, setMatchMode] = useState<CategoryRule["matchMode"]>("contains");
-  return <Sheet title="Regras de importação" subtitle="Ensine o app a simplificar descrições bancárias e preencher local, título e categoria." onClose={onClose}><div className="form"><div className="rule-builder advanced-rule-builder">
+  return <Sheet title="Regras de importação" subtitle="Ensine o app a preencher somente local e categoria. A descrição de cada lançamento nunca é repetida." onClose={onClose}><div className="form"><div className="rule-builder advanced-rule-builder">
     <Field label="Texto que aparece no banco"><input value={keyword} onChange={(event) => setKeyword(event.target.value)} placeholder="Ex.: IFOOD XYZ487" /></Field>
     <Field label="Como reconhecer"><select value={matchMode} onChange={(event) => setMatchMode(event.target.value as CategoryRule["matchMode"])}><option value="contains">Contém este texto</option><option value="startsWith">Começa com este texto</option><option value="exact">Exatamente igual</option><option value="simplified">Ignorar números e códigos</option></select></Field>
-    <Field label="Local ou origem (opcional)"><input value={place} onChange={(event) => setPlace(event.target.value)} placeholder="Ex.: Lanchonete do João" /></Field>
-    <Field label="Título padrão (opcional)"><input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Ex.: Pedido de lanche" /></Field>
+    <Field label="Local ou pessoa (opcional)" hint="Este é o nome que poderá aparecer de novo em importações parecidas."><input value={place} onChange={(event) => setPlace(event.target.value)} placeholder="Ex.: Lanchonete do João" /></Field>
     <Field label="Categoria"><select value={categoryId} onChange={(event) => setCategoryId(event.target.value)}>{state.categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></Field>
-    <button className="primary-button" disabled={!keyword.trim()} onClick={() => { onChange([{ id: uid("rule"), keyword: keyword.trim(), categoryId, place: place.trim() || undefined, title: title.trim() || undefined, matchMode }, ...state.rules]); setKeyword(""); setPlace(""); setTitle(""); }}>Adicionar regra</button>
-  </div><div className="rules-list">{state.rules.map((rule) => <div key={rule.id}><span><strong>“{rule.keyword}”</strong><small>{rule.place ? rule.place + " · " : ""}{rule.title ? rule.title + " · " : ""}{state.categories.find((category) => category.id === rule.categoryId)?.name}</small></span><button onClick={() => onChange(state.rules.filter((item) => item.id !== rule.id))}><Icon name="trash" size={18} /></button></div>)}</div></div></Sheet>;
+    <button className="primary-button" disabled={!keyword.trim()} onClick={() => { onChange([{ id: uid("rule"), keyword: keyword.trim(), categoryId, place: place.trim() || undefined, matchMode }, ...state.rules]); setKeyword(""); setPlace(""); }}>Adicionar regra</button>
+  </div><div className="rules-list">{state.rules.map((rule) => <div key={rule.id}><span><strong>“{rule.keyword}”</strong><small>{rule.place ? rule.place + " · " : ""}{state.categories.find((category) => category.id === rule.categoryId)?.name}</small></span><button onClick={() => onChange(state.rules.filter((item) => item.id !== rule.id))}><Icon name="trash" size={18} /></button></div>)}</div></div></Sheet>;
 }
 
 function CategoryManagerSheet({ state, onClose, onState }: { state: AppState; onClose: () => void; onState: (state: AppState) => void }) {
@@ -777,10 +818,21 @@ export default function App() {
     return () => media.removeEventListener("change", applyTheme);
   }, [state.settings.theme]);
 
-  const saveTransactions = (transactions: Transaction[], replacedId?: string, learnedRules: CategoryRule[] = []) => { setState((current) => ({ ...current, demoMode: false, rules: mergeLearnedRules(current.rules, learnedRules), transactions: [...current.transactions.filter((item) => item.id !== replacedId), ...transactions] })); setModal(null); };
+  const saveTransactions = (transactions: Transaction[], replacedId?: string, learnedRules: CategoryRule[] = [], historyUpdate?: HistoryImportUpdate) => {
+    setState((current) => {
+      const updatedHistory = historyUpdate ? current.transactions.map((item) => {
+        const shouldUpdate = item.id !== historyUpdate.excludeId
+          && hasSameImportPattern(item, historyUpdate.pattern)
+          && importMoment(item) < historyUpdate.before;
+        return shouldUpdate ? { ...item, place: historyUpdate.place, categoryId: historyUpdate.categoryId, needsReview: isPlaceholderTitle(item.description) || historyUpdate.categoryId === "other" } : item;
+      }) : current.transactions;
+      return { ...current, demoMode: false, rules: mergeLearnedRules(current.rules, learnedRules), transactions: [...updatedHistory.filter((item) => item.id !== replacedId), ...transactions] };
+    });
+    setModal(null);
+  };
   const importTransactions = (items: ImportCandidate[]) => {
     const transactions: Transaction[] = items.map((item) => ({ id: uid("tx"), kind: item.kind, description: item.description.trim(), place: item.place.trim() || undefined, originalDescription: item.originalDescription, needsReview: item.needsReview, amount: item.amount, date: item.date, time: item.time, categoryId: item.categoryId, accountId: item.accountId, paymentMethod: "other", notes: "Importado de extrato.", source: item.source, importFingerprint: item.fingerprint }));
-    const learnedRules: CategoryRule[] = items.filter((item) => item.rememberRule).map((item) => ({ id: uid("rule"), keyword: item.originalDescription, categoryId: item.categoryId, place: item.place.trim() || undefined, title: !isPlaceholderTitle(item.description) ? item.description.trim() : undefined, matchMode: "simplified" }));
+    const learnedRules: CategoryRule[] = items.filter((item) => item.rememberRule).map((item) => ({ id: uid("rule"), keyword: item.originalDescription, categoryId: item.categoryId, place: item.place.trim() || undefined, matchMode: "simplified" }));
     saveTransactions(transactions, undefined, learnedRules);
   };
   const deleteTransaction = (id: string) => { if (window.confirm("Excluir este lançamento?")) { setState((current) => ({ ...current, transactions: current.transactions.filter((item) => item.id !== id), demoMode: false })); setModal(null); } };
