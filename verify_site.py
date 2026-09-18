@@ -6,10 +6,16 @@ from urllib.parse import urlsplit
 import json
 import sys
 
-from PIL import Image
+from PIL import Image, ImageChops
 
 
 ROOT = Path(sys.argv[1] if len(sys.argv) > 1 else "_site").resolve()
+BRAND = Path("source/public/brand-icons")
+
+CANONICAL_PWA_ICONS = {
+    ROOT: BRAND / "icon-finance-20260911.jpg",
+    ROOT / "beta": BRAND / "icon-beta-20260911.jpg",
+}
 
 
 REQUIRED_FILES = [
@@ -105,6 +111,17 @@ def check_manifests_and_icons() -> None:
         }
         for relative, dimensions in expected.items():
             require(Image.open(base / relative).size == dimensions, f"Dimensão incorreta: {(base / relative).relative_to(ROOT)}")
+
+        source = CANONICAL_PWA_ICONS[base]
+        require(source.is_file(), f"Fonte canônica ausente: {source}")
+        with Image.open(source) as image:
+            expected_pixels = image.convert("RGB").resize((512, 512), Image.Resampling.LANCZOS)
+        with Image.open(base / "apple-touch-icon.png") as image:
+            actual_pixels = image.convert("RGB")
+        require(
+            ImageChops.difference(expected_pixels, actual_pixels).getbbox() is None,
+            f"Ícone publicado não corresponde à fonte canônica: {(base / 'apple-touch-icon.png').relative_to(ROOT)}",
+        )
     require(
         (ROOT / "apple-touch-icon.png").read_bytes() != (ROOT / "beta/apple-touch-icon.png").read_bytes(),
         "Os ícones Oficial e Beta não podem ser idênticos.",
@@ -116,6 +133,10 @@ def check_environments() -> None:
     beta_index = read("beta/index.html")
     require('name="app-environment" content="official"' in official_index, "Marcador Oficial ausente")
     require('name="app-environment" content="beta"' in beta_index, "Marcador Beta ausente")
+    require('rel="icon" href="./apple-touch-icon.png"' in official_index, "Favicon Oficial não usa o ícone canônico")
+    require('rel="apple-touch-icon" href="./icons/apple-touch-icon.png"' in official_index, "Atalho iOS Oficial não usa a variação gerada")
+    require('rel="icon" href="./apple-touch-icon.png"' in beta_index, "Favicon Beta não usa o ícone canônico")
+    require('rel="apple-touch-icon" href="./icons/apple-touch-icon.png"' in beta_index, "Atalho iOS Beta não usa a variação gerada")
 
     official_assets = "\n".join(path.read_text(encoding="utf-8") for path in (ROOT / "assets").glob("*.js"))
     beta_assets = "\n".join(path.read_text(encoding="utf-8") for path in (ROOT / "beta/assets").glob("*.js"))
@@ -127,6 +148,10 @@ def check_environments() -> None:
     require("finance-tools-page" in menu and "Central de Diagnóstico" in menu, "Menu geral incompleto")
     require("<script" not in menu, "Menu geral não deve depender do aplicativo ou de JavaScript")
     require("repeat(2,minmax(0,1fr))" in menu, "Grade principal do menu foi alterada")
+    require('./apple-touch-icon.png' in menu, "Menu não usa o ícone PWA Oficial")
+    require('./beta/apple-touch-icon.png' in menu, "Menu não usa o ícone PWA Beta")
+    require('icon-finance-20260911.jpg' not in menu, "Menu ainda aponta para uma cópia paralela do ícone Oficial")
+    require('icon-beta-20260911.jpg' not in menu, "Menu ainda aponta para uma cópia paralela do ícone Beta")
 
     recovery = read("recover.html") + read("beta/recover.html")
     require("localStorage.clear" not in recovery, "Recuperação pode apagar todo o armazenamento local")
