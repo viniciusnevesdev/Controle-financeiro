@@ -1,6 +1,6 @@
-const CACHE = "meu-dinheiro-beta-1.2.0-beta.66-env3";
+const CACHE = "meu-dinheiro-beta-1.2.0-beta.67-env3";
 const CACHE_PREFIX = "meu-dinheiro-beta-";
-const CORE = ["./", "./index.html", "./manifest.webmanifest", "./apple-touch-icon.png", "./assets/index-dL0TG_c-.js", "./assets/index-C_4OH_-4.css"];
+const CORE = ["./", "./index.html", "./manifest.webmanifest", "./apple-touch-icon.png", "./assets/index-BRKETfCx.js", "./assets/index-DIA6UML7.css"];
 
 self.addEventListener("install", (event) => {
   self.skipWaiting();
