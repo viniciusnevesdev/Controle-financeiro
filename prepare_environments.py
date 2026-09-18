@@ -322,8 +322,11 @@ if BETA_DB not in beta_js:
     raise SystemExit("Publicação bloqueada: a Beta não usa o banco isolado")
 if f'"{OFFICIAL_FALLBACK}"' in beta_js:
     raise SystemExit("Publicação bloqueada: a Beta ainda referencia a chave exata do Oficial")
-if (SITE / "apple-touch-icon.png").read_bytes() == (beta / "apple-touch-icon.png").read_bytes():
-    raise SystemExit("Publicação bloqueada: ícones Oficial e Beta precisam ser diferentes")
+# Os builds começam a partir da mesma estrutura de desenvolvimento. Os ícones PWA
+# são aplicados logo depois, a partir das fontes canônicas, por
+# generate_valid_pwa_icons.py. A verificação de que Oficial e Beta são diferentes
+# fica em verify_site.py, depois dessa aplicação; testar aqui exigiria copiar o
+# ícone gerado da Beta de volta para a fonte compartilhada.
 
 menu_text = (SITE / "menu.html").read_text(encoding="utf-8")
 for link in ("./", "./beta/", "./diagnostico/", "./launch.html", "./recover.html", "./safe.html", "./beta/launch.html", "./beta/recover.html", "./beta/safe.html"):
