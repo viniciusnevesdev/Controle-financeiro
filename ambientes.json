@@ -7,7 +7,7 @@
   },
   "beta": {
     "path": "./beta/",
-    "release": "1.2.0-beta.68",
+    "release": "1.2.0-beta.69",
     "branch": "main",
     "database": "meu-dinheiro-inteligente-beta"
   },
