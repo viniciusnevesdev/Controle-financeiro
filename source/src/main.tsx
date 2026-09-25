@@ -11,5 +11,16 @@ createRoot(document.getElementById("root")!).render(
 );
 
 if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js"));
+  window.addEventListener("load", async () => {
+    try {
+      // Não reutiliza a resposta HTTP antiga do sw.js e verifica a publicação
+      // mais recente sempre que o usuário recarrega a página.
+      const registration = await navigator.serviceWorker.register("./sw.js", {
+        updateViaCache: "none",
+      });
+      await registration.update();
+    } catch (error) {
+      console.error("Falha ao verificar atualização do app", error);
+    }
+  });
 }
