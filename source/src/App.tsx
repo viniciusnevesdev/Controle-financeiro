@@ -60,6 +60,10 @@ const toneColor: Record<string, string> = {
   blue: "#1677ff", yellow: "#ffc94d", orange: "#ff9f43", violet: "#8358f5", green: "#42b883",
   pink: "#ef5da8", indigo: "#4e7fea", teal: "#19a99a", coral: "#ff6f73", emerald: "#28a96b", slate: "#7d8797",
 };
+const toneLabels: Record<string, string> = {
+  blue: "Azul", yellow: "Amarelo", orange: "Laranja", violet: "Violeta", green: "Verde",
+  pink: "Rosa", indigo: "Índigo", teal: "Turquesa", coral: "Coral", emerald: "Esmeralda", slate: "Cinza",
+};
 const categoryIconOptions: Array<{ value: IconName; label: string }> = [
   { value: "home", label: "Casa" }, { value: "basket", label: "Compras" }, { value: "food", label: "Comida" },
   { value: "car", label: "Transporte" }, { value: "heart", label: "Saúde" }, { value: "smile", label: "Lazer" },
@@ -135,6 +139,22 @@ function MonthPicker({ value, onChange, transactionDates = [] }: { value: string
   const options = [...new Set([value, ...recent, ...transactionDates.map((date) => date.slice(0, 7)).filter((month) => /^\d{4}-\d{2}$/.test(month))])]
     .sort((a, b) => b.localeCompare(a));
   return <label className="month-picker"><Icon name="calendar" size={18} /><select value={value} onChange={(event) => onChange(event.target.value)}>{options.map((item) => <option key={item} value={item}>{monthLabel(item)}</option>)}</select><Icon name="down" size={16} /></label>;
+}
+
+function CategoryIconPicker({ value, onChange }: { value: IconName; onChange: (value: IconName) => void }) {
+  return <div className="category-icon-picker" role="group" aria-label="Escolha um ícone">
+    {categoryIconOptions.map((option) => <button type="button" key={option.value} className={value === option.value ? "active" : ""} aria-pressed={value === option.value} onClick={() => onChange(option.value)}>
+      <span className="category-icon-picker-symbol"><Icon name={option.value} size={21} /></span><small>{option.label}</small>
+    </button>)}
+  </div>;
+}
+
+function CategoryColorPicker({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  return <div className="category-color-picker" role="group" aria-label="Escolha uma cor">
+    {Object.entries(toneColor).map(([tone, color]) => <button type="button" key={tone} className={value === tone ? "active" : ""} aria-pressed={value === tone} onClick={() => onChange(tone)}>
+      <span className="category-color-picker-swatch" style={{ background: color }} /><small>{toneLabels[tone] || tone}</small>
+    </button>)}
+  </div>;
 }
 
 function TransactionRow({ transaction, state, onClick }: { transaction: Transaction; state: AppState; onClick: () => void }) {
@@ -577,15 +597,16 @@ function CategoryManagerSheet({ state, onClose, onState }: { state: AppState; on
   return <Sheet title="Categorias" subtitle="Crie, renomeie e personalize. As alterações são salvas automaticamente." onClose={onClose} wide>
     <form className="category-create" onSubmit={addCategory}>
       <Field label="Nova categoria"><input value={newName} onChange={(event) => setNewName(event.target.value)} placeholder="Ex.: Produtos de limpeza" /></Field>
-      <div className="form-grid"><Field label="Ícone"><select value={newIcon} onChange={(event) => setNewIcon(event.target.value as IconName)}>{categoryIconOptions.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}</select></Field><Field label="Cor"><select value={newTone} onChange={(event) => setNewTone(event.target.value)}>{Object.keys(toneColor).map((tone) => <option value={tone} key={tone}>{tone}</option>)}</select></Field></div>
+      <Field label="Ícone"><CategoryIconPicker value={newIcon} onChange={setNewIcon} /></Field>
+      <Field label="Cor"><CategoryColorPicker value={newTone} onChange={setNewTone} /></Field>
       <button className="primary-button" disabled={!newName.trim()}><Icon name="plus" size={18} /> Adicionar categoria</button>
     </form>
     <div className="category-manager-list">{state.categories.map((category) => <details className="category-editor" key={category.id}>
       <summary><span className={"category-icon tone-" + category.tone}><Icon name={category.icon as IconName} size={20} /></span><span><strong>{category.name}</strong><small>Toque para editar</small></span><Icon name="chevron" size={18} /></summary>
       <div className="category-editor-body">
         <Field label="Nome"><input value={category.name} onChange={(event) => updateCategory(category.id, { name: event.target.value })} /></Field>
-        <div className="form-grid"><Field label="Ícone"><select value={category.icon} onChange={(event) => updateCategory(category.id, { icon: event.target.value })}>{categoryIconOptions.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}</select></Field><Field label="Cor"><select value={category.tone} onChange={(event) => updateCategory(category.id, { tone: event.target.value })}>{Object.keys(toneColor).map((tone) => <option value={tone} key={tone}>{tone}</option>)}</select></Field></div>
-        <div className="category-color-preview" aria-label="Prévia da cor">{Object.entries(toneColor).map(([tone, color]) => <button type="button" key={tone} className={category.tone === tone ? "active" : ""} style={{ background: color }} onClick={() => updateCategory(category.id, { tone })} aria-label={tone} />)}</div>
+        <Field label="Ícone"><CategoryIconPicker value={category.icon as IconName} onChange={(icon) => updateCategory(category.id, { icon })} /></Field>
+        <Field label="Cor"><CategoryColorPicker value={category.tone} onChange={(tone) => updateCategory(category.id, { tone })} /></Field>
         {category.id === "other" ? <p className="protected-category"><Icon name="info" size={16} /> “Outros” permanece disponível para lançamentos sem categoria identificada.</p> : <button className="danger-button compact-danger" type="button" onClick={() => removeCategory(category.id)}><Icon name="trash" size={17} /> Excluir categoria</button>}
       </div>
     </details>)}</div>
