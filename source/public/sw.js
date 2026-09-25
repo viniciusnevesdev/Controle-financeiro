@@ -1,4 +1,4 @@
-const CACHE = "meu-dinheiro-inteligente-v24";
+const CACHE = "meu-dinheiro-inteligente-v25";
 const CORE = ["./", "./index.html", "./manifest.webmanifest", "./icon.svg", "./apple-touch-icon.png"];
 
 self.addEventListener("install", (event) => {
@@ -20,7 +20,9 @@ self.addEventListener("fetch", (event) => {
   const acceptsHtml = request.headers.get("accept")?.includes("text/html");
   if (acceptsHtml) {
     event.respondWith(
-      fetch(request)
+      // A navegação sempre consulta a publicação atual; o cache só entra
+      // como fallback quando o aparelho estiver offline.
+      fetch(new Request(request, { cache: "no-store" }))
         .then((response) => {
           const copy = response.clone();
           caches.open(CACHE).then((cache) => cache.put("./index.html", copy));
