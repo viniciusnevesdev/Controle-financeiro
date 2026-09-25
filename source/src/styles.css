@@ -81,7 +81,8 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .segmented .expense-tab.active { color: var(--expense-color); }
 .segmented .income-tab.active { color: var(--income-color); }
 .month-picker { width: max-content; max-width: 100%; min-height: 50px; margin: 0 0 16px; padding: 0 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 17px; box-shadow: 0 5px 18px rgba(22, 47, 37, .06); display: flex; align-items: center; gap: 8px; color: var(--green-2); }
-.month-picker select { border: 0; background: transparent; color: inherit; font-weight: 700; min-width: 130px; appearance: none; outline: none; }
+.month-picker > svg { flex: 0 0 auto; }
+.month-picker select { flex: 1 1 auto; border: 0; background: transparent; color: inherit; font-weight: 700; min-width: 150px; appearance: none; outline: none; }
 .home-toolbar { display: flex; align-items: stretch; gap: 9px; margin-bottom: 14px; }
 .home-toolbar .month-picker { min-width: 0; flex: 1; margin: 0; }
 .home-toolbar .month-picker select { min-width: 0; width: 100%; }
@@ -507,6 +508,12 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .rules-list button { border: 0; background: #fff0ef; color: #dc5d61; border-radius: 10px; width: 34px; height: 34px; display: grid; place-items: center; }
 .category-create { padding: 13px; margin-bottom: 12px; border: 1px solid var(--line); border-radius: 19px; background: var(--surface); display: grid; gap: 11px; }
 .category-create .primary-button { min-height: 46px; }
+.category-icon-picker, .category-color-picker { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 7px; }
+.category-icon-picker button, .category-color-picker button { min-width: 0; min-height: 67px; padding: 7px 4px; border: 1px solid var(--line); border-radius: 13px; background: var(--surface); color: var(--muted); display: grid; place-items: center; align-content: center; gap: 5px; cursor: pointer; }
+.category-icon-picker button.active, .category-color-picker button.active { border-color: var(--green-2); background: var(--surface-tint); color: var(--green-2); box-shadow: 0 0 0 2px color-mix(in srgb, var(--green-2) 22%, transparent); }
+.category-icon-picker-symbol { width: 31px; height: 31px; border-radius: 10px; display: grid; place-items: center; background: var(--surface-soft); color: currentColor; }
+.category-icon-picker small, .category-color-picker small { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 9px; font-weight: 700; }
+.category-color-picker-swatch { width: 25px; height: 25px; border-radius: 50%; box-shadow: 0 0 0 2px var(--surface), 0 0 0 3px var(--line); }
 .category-manager-list { display: grid; gap: 8px; }
 .category-editor { border: 1px solid var(--line); border-radius: 17px; background: var(--surface); overflow: hidden; }
 .category-editor > summary { min-height: 66px; padding: 10px 12px; display: grid; grid-template-columns: auto minmax(0,1fr) auto; align-items: center; gap: 11px; list-style: none; cursor: pointer; }
